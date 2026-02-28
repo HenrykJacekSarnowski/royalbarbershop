@@ -1,43 +1,48 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-// INICIALIZACE SCÉNY
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff); // Bílé pozadí pro styl omalovánek
-
-// KAMERA (Perspektiva pro 3D hloubku)
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(3, 3, 5);
-
-// RENDERER (HD kvalita s vyhlazováním hran)
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio); // Přizpůsobení rozlišení displeje
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.toneMapping = THREE.ReinhardToneMapping;
 document.getElementById('app').appendChild(renderer.domElement);
 
-// OSVĚTLENÍ (Nutné pro Toon shading)
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(5, 5, 5);
-scene.add(light, new THREE.AmbientLight(0xffffff, 0.6));
+// Atmosférické osvětlení (Warm Interior)
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+scene.add(ambientLight);
 
-// AKTIVNÍ PRVEK: BARBERSHOP CHAIR (Placeholder)
-const geometry = new THREE.BoxGeometry(1.5, 0.8, 1.5);
-// ToonMaterial vytváří komiksový/omalovánkový vzhled
-const material = new THREE.MeshToonMaterial({ color: 0xdddddd });
-const chair = new THREE.Mesh(geometry, material);
+const warmSpotlight = new THREE.SpotLight(0xffd485, 2);
+warmSpotlight.position.set(5, 5, 5);
+warmSpotlight.castShadow = true;
+scene.add(warmSpotlight);
 
-// SILNÉ OBRYSY (Váš požadavek na čistý styl omalovánek)
-const edges = new THREE.EdgesGeometry(geometry);
-const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 4 }));
-chair.add(line); 
+// Materiály odpovídající screenu (tmavé dřevo, kůže, chrom)
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+const woodMat = new THREE.MeshStandardMaterial({ color: 0x2b1d0e, roughness: 0.5 });
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 1, roughness: 0.2 });
 
-scene.add(chair);
+// Simulace interiéru (Základní geometrie pro HD hloubku)
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), floorMat);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
 
-// OVLÁDÁNÍ (Umožňuje uživateli rotovat scénu myší)
+// Barberské křeslo (Aktivní 3D prvek)
+const chairGroup = new THREE.Group();
+const seat = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 32), goldMat);
+chairGroup.add(seat, base);
+chairGroup.position.set(0, 0.05, -2);
+scene.add(chairGroup);
+
+camera.position.set(0, 2, 5);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.autoRotate = true; // Pomalé otáčení pro dynamiku
+controls.autoRotateSpeed = 0.5;
 
-// ANIMAČNÍ SMYČKA (Udržuje scénu aktivní v reálném čase)
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
@@ -45,10 +50,8 @@ function animate() {
 }
 animate();
 
-// RESPONZIVITA (Přizpůsobení při změně velikosti okna)
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
